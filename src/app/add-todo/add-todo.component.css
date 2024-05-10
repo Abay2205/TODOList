@@ -1,0 +1,14 @@
+.add-todo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.inputForms {
+  width: 20vw;
+}
+.example-card {
+  max-width: 40vw;
+  align-items: center;
+  text-align: center;
+}
+
