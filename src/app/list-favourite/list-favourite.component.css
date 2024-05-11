@@ -1,0 +1,15 @@
+.todayTodo {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 50px;
+}
+.todayTodoCard{
+  width: 70vw;
+}
+.todayCardHeader {
+  background-color: lightgray;
+}
+.todayCardBody{
+  padding: 30px;
+}

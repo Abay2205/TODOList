@@ -12,6 +12,8 @@ import {MatDatepickerModule,} from "@angular/material/datepicker";
 import {MatNativeDateModule} from "@angular/material/core";
 import {NgxMaterialTimepickerModule} from "ngx-material-timepicker";
 import {MatCard, MatCardActions, MatCardContent, MatCardHeader} from "@angular/material/card";
+import {Todo} from "../todos.interface";
+import {Observable} from "rxjs";
 
 
 
@@ -33,17 +35,40 @@ export class AddTodoComponent implements OnInit {
     datePicker: new FormControl("", [Validators.required]),
     timePicker: new FormControl("")
   });
-
+  public todos: Todo[] = [];
   minDate: Date = new Date();
+  id: number = 0;
+
+  constructor() {
+    this.todos = !!window.localStorage.getItem('todos')
+      ? JSON.parse(window.localStorage.getItem('todos') || '')
+      : [];
+  }
   ngOnInit() {
   }
-  onSubmit(){
-    if(this.validateForm.valid){
+  onSubmit() {
+    if (this.validateForm.valid) {
       console.log(this.validateForm.value);
     } else {
       alert('не валдино')
     }
     console.log(this.validateForm.get(['textArea'])?.value)
+
+    const todo: Todo = {
+      id: this.id +1,
+      textArea: this.validateForm.value.textArea,
+      createdAt: new Date,
+      Date: this.validateForm.value.datePicker,
+      Time: this.validateForm.value.timePicker
+    }
+    this.todos.push(todo);
+    this.validateForm.reset();
+    window.localStorage.setItem('todos', JSON.stringify(this.todos));
+    console.log(this.todos);
+  }
+  public initModel() {
+    const tasksLocalStorage: string = window.localStorage.getItem('tasks') || '[]';
+    const tasks: Todo[] = JSON.parse(tasksLocalStorage);
   }
 }
 

@@ -8,11 +8,11 @@
       <mat-form-field class="inputForms">
         <mat-label>Textarea</mat-label>
         <textarea matInput formControlName="textArea" required></textarea>
-        @if(!validateForm.controls.textArea.valid && validateForm.controls.textArea.touched){
-        <small style="color: red">This is required</small>
-        }
-<!--        <mat-error *ngIf="validateForm.controls['textArea'].errors?.['required']">This is required</mat-error>-->
-<!--        <mat-error *ngIf="validateForm.controls['textArea'].errors?.['maxlength']">max 100 symbol</mat-error>-->
+<!--        @if (!validateForm.controls.textArea.valid && validateForm.controls.textArea.touched && validateForm.controls.textArea.dirty) {-->
+<!--        <small style="color: red">This is required</small>-->
+<!--        }-->
+        <mat-error *ngIf="validateForm.controls['textArea'].errors?.['required']">This is required</mat-error>
+        <mat-error *ngIf="validateForm.controls['textArea'].errors?.['maxlength']">max 100 symbol</mat-error>
       </mat-form-field>
       <mat-form-field class="inputForms">
         <mat-label>Choose a date</mat-label>
@@ -32,6 +32,6 @@
     </form>
   </mat-card-content>
   <mat-card-actions>
-    <button mat-flat-button color="primary" (click)="onSubmit()">Primary</button>
+    <button mat-flat-button color="primary" (click)="onSubmit()" [disabled]="!validateForm.valid">Primary</button>
   </mat-card-actions>
 </mat-card>
