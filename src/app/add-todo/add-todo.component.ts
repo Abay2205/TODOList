@@ -55,7 +55,7 @@ export class AddTodoComponent implements OnInit {
     console.log(this.validateForm.get(['textArea'])?.value)
 
     const todo: Todo = {
-      id: this.id +1,
+      id: ++this.id,
       textArea: this.validateForm.value.textArea,
       createdAt: new Date,
       Date: this.validateForm.value.datePicker,
@@ -65,10 +65,6 @@ export class AddTodoComponent implements OnInit {
     this.validateForm.reset();
     window.localStorage.setItem('todos', JSON.stringify(this.todos));
     console.log(this.todos);
-  }
-  public initModel() {
-    const tasksLocalStorage: string = window.localStorage.getItem('tasks') || '[]';
-    const tasks: Todo[] = JSON.parse(tasksLocalStorage);
   }
 }
 
