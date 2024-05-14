@@ -1,4 +1,4 @@
-<div class="add-todo1">
+<div class="add-todo">
 <mat-card class="todo-card">
   <mat-card-header class="add-todo-header">
     <mat-card-title>Add Todo</mat-card-title>
@@ -9,9 +9,7 @@
       <mat-form-field class="inputForms">
         <mat-label>Textarea</mat-label>
         <textarea matInput formControlName="textArea" required></textarea>
-<!--        @if (!validateForm.controls.textArea.valid && validateForm.controls.textArea.touched && validateForm.controls.textArea.dirty) {-->
-<!--        <small style="color: red">This is required</small>-->
-<!--        }-->
+
         <mat-error *ngIf="validateForm.controls['textArea'].errors?.['required']">This is required</mat-error>
         <mat-error *ngIf="validateForm.controls['textArea'].errors?.['maxlength']">max 100 symbol</mat-error>
       </mat-form-field>
@@ -27,8 +25,8 @@
         <mat-label>Choose time</mat-label>
         <input matInput [ngxTimepicker]="timePicker" formControlName="timePicker">
         <mat-hint>hh/mm</mat-hint>
-        <ngx-material-timepicker-toggle matIconSuffix [for]="timePicker"></ngx-material-timepicker-toggle>
-        <ngx-material-timepicker #timePicker></ngx-material-timepicker>
+        <ngx-material-timepicker-toggle matIconSuffix  [for]="timePicker"></ngx-material-timepicker-toggle>
+        <ngx-material-timepicker #timePicker ></ngx-material-timepicker>
       </mat-form-field>
     </form>
   </mat-card-content>

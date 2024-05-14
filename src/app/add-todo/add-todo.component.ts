@@ -1,20 +1,19 @@
 import {Component, OnInit} from '@angular/core';
-import {FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators} from "@angular/forms";
+import {FormControl, FormGroup, ReactiveFormsModule, Validators} from "@angular/forms";
 import {MatFormFieldModule} from "@angular/material/form-field";
 import {MatInputModule} from "@angular/material/input";
 import {MatSelectModule} from "@angular/material/select";
 import {MatIconModule} from "@angular/material/icon";
 import {MatDividerModule} from "@angular/material/divider";
-import {DatePipe, NgIf} from '@angular/common';
+import {NgIf} from '@angular/common';
 import {MatButtonModule} from "@angular/material/button";
 import {MatCardModule} from "@angular/material/card";
 import {MatDatepickerModule,} from "@angular/material/datepicker";
 import {MatNativeDateModule} from "@angular/material/core";
 import {NgxMaterialTimepickerModule} from "ngx-material-timepicker";
-import {MatCard, MatCardActions, MatCardContent, MatCardHeader} from "@angular/material/card";
+import {MatCardActions, MatCardContent, MatCardHeader} from "@angular/material/card";
 import {Todo} from "../todos.interface";
-import {Observable} from "rxjs";
-
+import {LocalStorageService} from "../local-storage.service";
 
 
 @Component({
@@ -28,6 +27,8 @@ import {Observable} from "rxjs";
   templateUrl: './add-todo.component.html',
   styleUrl: './add-todo.component.css'
 })
+
+
 export class AddTodoComponent implements OnInit {
 
   public validateForm = new FormGroup({
@@ -36,35 +37,55 @@ export class AddTodoComponent implements OnInit {
     timePicker: new FormControl("")
   });
   public todos: Todo[] = [];
-  minDate: Date = new Date();
-  id: number = 0;
+  public minDate: Date = new Date();
+  public id: number = 0;
 
-  constructor() {
-    this.todos = !!window.localStorage.getItem('todos')
-      ? JSON.parse(window.localStorage.getItem('todos') || '')
+  constructor(private localStore: LocalStorageService) {
+    this.todos = !!localStore.getData('todos')
+      ? JSON.parse(localStore.getData('todos') || '')
       : [];
   }
+
   ngOnInit() {
   }
-  onSubmit() {
+
+  public onSubmit() {
     if (this.validateForm.valid) {
       console.log(this.validateForm.value);
     } else {
-      alert('не валдино')
+      alert('не валидно')
     }
+    const dateTime = this.combineDateAndTime();
+
+    if (!dateTime) return;
+
     const todo: Todo = {
       id: ++this.id,
       textArea: this.validateForm.value.textArea,
       createdAt: new Date,
-      Date: this.validateForm.value.datePicker,
-      Time: this.validateForm.value.timePicker
+      Date: dateTime
     }
     this.todos.push(todo);
     this.validateForm.reset();
-    window.localStorage.setItem('todos', JSON.stringify(this.todos));
+    localStorage.setItem('todos', JSON.stringify(this.todos));
     console.log(this.todos);
   }
 
+  private combineDateAndTime(): Date | null {
+    const date = this.validateForm.value.datePicker;
+    const time = this.validateForm.value.timePicker;
+
+    if (!date || !time) return null;
+    const [timeString, period] = time.split(' ');
+    const [hoursString, minutesString] = timeString.split(':');
+    let hours = parseInt(hoursString);
+    const minutes = parseInt(minutesString);
+
+    const combinedDateTime = new Date(date);
+    combinedDateTime.setHours(hours, minutes);
+
+    return combinedDateTime;
+  }
 }
 
 

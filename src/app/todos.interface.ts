@@ -3,8 +3,8 @@ import {DateTime} from "luxon";
 export interface Todo {
   id: number;
   textArea?: string | null;
-  createdAt: Date;
+  createdAt: Date | string;
  // dateTime?: string;
-  Date?: string | null;
-  Time?: string | null;
+  Date: Date | null | string
+
 }

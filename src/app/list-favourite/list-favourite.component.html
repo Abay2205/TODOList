@@ -1,7 +1,7 @@
 <div class="todayTodo">
   <mat-card class="todayTodoCard">
     <mat-card-header class="todayCardHeader">
-      <mat-card-title>Today's todo</mat-card-title>
+      <mat-card-title>{{title}}</mat-card-title>
     </mat-card-header>
     <mat-card-content class="todayCardBody">
       <table mat-table [dataSource]="dataSource" class="mat-elevation-z8">
@@ -25,7 +25,7 @@
         </ng-container>
 
         <!-- Position Column -->
-        <ng-container *ngFor="let property of ['textArea', 'createdAt', 'Date', 'Time']">
+        <ng-container *ngFor="let property of ['textArea', 'createdAt', 'Date']">
           <ng-container matColumnDef="{{ property }}">
             <th mat-header-cell *matHeaderCellDef> {{ property }} </th>
             <td mat-cell *matCellDef="let element"> {{ element[property] }} </td>
@@ -34,9 +34,13 @@
         </ng-container>
 
         <ng-container matColumnDef="delete">
-          <th mat-header-cell *matHeaderCellDef></th>
+          <th mat-header-cell *matHeaderCellDef>
+            <button mat-icon-button color="warn" [disabled]="!isAllSelected()" (click)="openDialog()">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </th>
           <td mat-cell *matCellDef="let row">
-            <button mat-icon-button color="warn" (click)="openConfirmationModal(row)">
+            <button mat-icon-button color="warn"  [disabled]="!selection.isSelected(row)" (click)="openConfirmationModal(row)">
               <mat-icon>delete</mat-icon>
             </button>
           </td>
@@ -50,14 +54,23 @@
     </mat-card-content>
   </mat-card>
 </div>
-<ng-template #confirmationDialog let-data>
+<ng-template #confirmDelete let-data>
   <h2 mat-dialog-title>Delete Todo</h2>
   <mat-dialog-content>
-    Are you sure you want to delete this todo?
+    {{confirm}}
   </mat-dialog-content>
   <mat-dialog-actions>
     <button mat-button [mat-dialog-close]="true">Yes</button>
     <button mat-button [mat-dialog-close]="false">No</button>
   </mat-dialog-actions>
 </ng-template>
-
+<ng-template #deleteAll let-data>
+<h2 mat-dialog-title>Delete All</h2>
+<mat-dialog-content>
+  {{confirm}}
+</mat-dialog-content>
+<mat-dialog-actions>
+  <button mat-button [mat-dialog-close]="true">Yes</button>
+  <button mat-button [mat-dialog-close]="false">No</button>
+</mat-dialog-actions>
+</ng-template>
