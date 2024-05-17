@@ -58,16 +58,22 @@ export class AddTodoComponent implements OnInit {
     const dateTime = this.combineDateAndTime();
 
     if (!dateTime) return;
-
+    const isLocalEmpty = this.localStore.getData('todos')
+    if(isLocalEmpty!==null){
+      const oldArr = JSON.parse(isLocalEmpty)
+      this.id = oldArr.length + 1
+    } else {
+      this.id = 1
+    }
     const todo: Todo = {
-      id: ++this.id,
+      id: this.id,
       textArea: this.validateForm.value.textArea,
       createdAt: new Date,
       Date: dateTime
     }
     this.todos.push(todo);
     this.validateForm.reset();
-    localStorage.setItem('todos', JSON.stringify(this.todos));
+    this.localStore.saveData('todos', JSON.stringify(this.todos));
     console.log(this.todos);
   }
 
@@ -80,6 +86,12 @@ export class AddTodoComponent implements OnInit {
     const [hoursString, minutesString] = timeString.split(':');
     let hours = parseInt(hoursString);
     const minutes = parseInt(minutesString);
+
+    if (period === 'PM' && hours !== 12) {
+      hours += 12;
+    } else if (period === 'AM' && hours === 12) {
+      hours = 0;
+    }
 
     const combinedDateTime = new Date(date);
     combinedDateTime.setHours(hours, minutes);
