@@ -1,4 +1,4 @@
-import {Component, inject, OnInit, TemplateRef, ViewChild} from '@angular/core';
+import {Component, DestroyRef, inject, OnInit, TemplateRef, ViewChild} from '@angular/core';
 import {Todo} from "../todos.interface";
 import {CommonModule} from "@angular/common";
 import {
@@ -22,6 +22,7 @@ import {
   MatDialogTitle
 } from "@angular/material/dialog";
 import {LocalStorageService} from "../local-storage.service";
+import {takeUntilDestroyed} from "@angular/core/rxjs-interop";
 
 
 @Component({
@@ -35,24 +36,29 @@ export class ListFavouriteComponent implements OnInit {
 
   @ViewChild('confirmDelete') confirmDelete!: TemplateRef<any>;
   @ViewChild('deleteAll') deleteAll!: TemplateRef<any>;
-  readonly title: string = "Today Todo's"
-  readonly title2: string = "My Todo list"
+  readonly todayTitle: string = "Today Todo's"
+  readonly listTitle: string = "My Todo list"
   readonly confirm: string = "Are you sure you want to delete this todo?"
+  readonly deleteTitle: string = "Delete Todo"
+  readonly deleteAllTitle: string = "Delete Todo"
 
-  constructor() {}
+  constructor() {
+  }
+
   private dialog = inject(MatDialog);
-  private localStore = inject(LocalStorageService);
+  private localStorageService = inject(LocalStorageService);
+  private destroyRef = inject(DestroyRef);
 
-  public displayedColumns: string[] = ['select', 'id', 'textArea', 'createdAt', 'Date', 'delete'];
-  public dataSource = new MatTableDataSource<Todo>();
-  public dataSource2 = new MatTableDataSource<Todo>();
+  public displayedColumns: string[] = ['select', 'textArea', 'createdAt', 'Date', 'delete'];
+  public todayDataSource = new MatTableDataSource<Todo>();
+  public listDataSource = new MatTableDataSource<Todo>();
   public selection = new SelectionModel<any>(true, []);
   public todos: Todo[] = [];
   public today = new Date();
 
   public isAllSelected(): boolean {
     const numSelected = this.selection.selected.length;
-    const numRows = this.dataSource.data.length;
+    const numRows = this.todayDataSource.data.length;
     return numSelected === numRows;
   }
 
@@ -63,7 +69,7 @@ export class ListFavouriteComponent implements OnInit {
       return;
     }
 
-    this.selection.select(...this.dataSource.data);
+    this.selection.select(...this.todayDataSource.data);
   }
 
 
@@ -76,13 +82,26 @@ export class ListFavouriteComponent implements OnInit {
 
 
   ngOnInit() {
-    const storedTodos = this.localStore.getData('todos');
+    const storedTodos = this.localStorageService.getData('todos');
     if (storedTodos) {
       this.todos = JSON.parse(storedTodos);
       this.filterTodosForToday();
       this.todos.forEach(todo => {
         if (todo.Date) {
-          todo.Date = this.calculateRemainingTime(todo.Date);
+          const todoDate = new Date(todo.Date);
+          todoDate.setHours(0, 0, 0, 0);
+          this.today.setHours(0, 0, 0, 0);
+          if (todoDate.getTime() === this.today.getTime()) {
+            todo.Date = this.calculateRemainingTime(todo.Date);
+          } else {
+            const combinedDateTime = new Date(todo.Date);
+            const formattedDateTime = combinedDateTime.toLocaleString('en-US', {
+              month: 'short',
+              day: '2-digit',
+              year: 'numeric'
+            });
+            todo.Date = formattedDateTime;
+          }
         }
         if (todo.createdAt) {
           const combinedDateTime = new Date(todo.createdAt);
@@ -96,8 +115,6 @@ export class ListFavouriteComponent implements OnInit {
       });
 
     }
-    console.log(this.todos)
-
   }
 
   private filterTodosForToday(): void {
@@ -112,18 +129,17 @@ export class ListFavouriteComponent implements OnInit {
       const todoDate = new Date(todo.Date);
       return todoDate >= startOfDay && todoDate <= endOfDay;
     });
-    this.dataSource.data = filteredTodos
+    this.todayDataSource.data = filteredTodos
     const remainingTodos = this.todos.filter(todo => !filteredTodos.includes(todo));
-    this.dataSource2.data = remainingTodos;
+    this.listDataSource.data = remainingTodos;
   }
 
-  private calculateRemainingTime(expirationDate: string | Date): string {
+  private calculateRemainingTime(expirationDate: string | Date): string | Date {
     const now = new Date();
     const expiryDate = new Date(expirationDate);
     const timeDifference = expiryDate.getTime() - now.getTime();
 
     if (timeDifference <= 0) {
-      console.log(expiryDate)
       return expirationDate + ' expired';
     }
 
@@ -147,12 +163,13 @@ export class ListFavouriteComponent implements OnInit {
   private deleteTodo(item: Todo): void {
     const currentRecord = this.todos.findIndex(m => m.id === item.id);
     this.todos.splice(currentRecord, 1);
-    this.localStore.saveData('todos', JSON.stringify(this.todos));
+    this.localStorageService.saveData('todos', JSON.stringify(this.todos));
+    this.localStorageService.removeData('id')
     console.log(item.textArea + ' deleted')
   }
 
   private deleteAllTodos(): void {
-    this.localStore.clearData()
+    this.localStorageService.clearData()
   }
 
   public openConfirmationModal(row: Todo): void {
@@ -160,7 +177,9 @@ export class ListFavouriteComponent implements OnInit {
       width: '250px',
       data: {todo: row}
     });
-    dialogRef.afterClosed().subscribe(result => {
+    dialogRef.afterClosed()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(result => {
       if (result) {
         this.deleteTodo(row);
       }
@@ -171,7 +190,9 @@ export class ListFavouriteComponent implements OnInit {
     const dialogRef = this.dialog.open(this.deleteAll, {
       width: '250px'
     });
-    dialogRef.afterClosed().subscribe(result => {
+    dialogRef.afterClosed()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(result => {
       if (result) {
         alert("delete all todos")
         this.deleteAllTodos()
@@ -181,6 +202,6 @@ export class ListFavouriteComponent implements OnInit {
 }
 
 //TODO СДЕЛАТЬ ЧТОБЫ DATASOURCE БЫЛ 1 ИЛИ ДВА РАЗНЫХ SELECTROWS
-//TODO ВО ВТОРОЙ КАРТОЧКЕ СДЕЛАТЬ EXPIRATION DATE ВМЕСТО TIME
 //TODO ИЗ ВТОРОЙ КАРТОЧКИ УБРАТЬ EXPIRED
 //TODO СДЕЛАТЬ ВРЕМЯ КРАСНЫМ ЕСЛИ ОСТАЛОСЬ МЕНЬШЕ ЧАСА
+//

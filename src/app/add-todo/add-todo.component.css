@@ -2,6 +2,7 @@
   align-items: center;
   display: flex;
   justify-content: center;
+  padding: 50px;
 }
 .todo-card {
   align-items: center;

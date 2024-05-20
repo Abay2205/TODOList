@@ -1,4 +1,4 @@
-import {Component, OnInit} from '@angular/core';
+import {Component, inject, OnInit} from '@angular/core';
 import {FormControl, FormGroup, ReactiveFormsModule, Validators} from "@angular/forms";
 import {MatFormFieldModule} from "@angular/material/form-field";
 import {MatInputModule} from "@angular/material/input";
@@ -34,25 +34,33 @@ export class AddTodoComponent implements OnInit {
   public readonly addTodo: string = "Add Todo"
   public readonly dateFormat: string = "MM/DD/YYYY"
   public readonly timeFormat: string = "hh/mm"
+  public readonly textArea: string = "textArea"
+  public readonly required: string = "This is required"
+  public readonly maxLength: string = "Max 100 symbol"
+  public readonly chooseDate: string = "Choose date"
+  public readonly chooseTime: string = "Choose time"
+  public readonly createTodo: string = "Create Todo"
 
   public validateForm = new FormGroup({
     textArea: new FormControl("", [Validators.required, Validators.maxLength(100)]),
     datePicker: new FormControl("", [Validators.required]),
     timePicker: new FormControl("")
   });
+  private localStorageService = inject(LocalStorageService);
   public todos: Todo[] = [];
   public minDate: Date = new Date();
   public id: number = 0;
 
-  constructor(private localStore: LocalStorageService) {
-    this.todos = !!localStore.getData('todos')
-      ? JSON.parse(localStore.getData('todos') || '')
-      : [];
+  constructor() {
+
   }
 
   ngOnInit() {
+    this.todos = this.localStorageService.getData('todos')
+      ? JSON.parse(this.localStorageService.getData('todos') || '')
+      : [];
     this.minDate = new Date()
-    this.id = 0
+    this.id = 0;
   }
 
   public onSubmit(): void {
@@ -60,7 +68,7 @@ export class AddTodoComponent implements OnInit {
       const dateTime = this.combineDateAndTime();
 
       if (!dateTime) return;
-      const isLocalEmpty = this.localStore.getData('todos')
+      const isLocalEmpty = this.localStorageService.getData('todos')
       if(isLocalEmpty!==null){
         const oldArr = JSON.parse(isLocalEmpty)
         this.id = oldArr.length + 1
@@ -75,7 +83,7 @@ export class AddTodoComponent implements OnInit {
       }
       this.todos.push(todo);
       this.validateForm.reset();
-      this.localStore.saveData('todos', JSON.stringify(this.todos));
+      this.localStorageService.saveData('todos', JSON.stringify(this.todos));
       console.log(this.todos);
     } else {
       alert('не валидно')

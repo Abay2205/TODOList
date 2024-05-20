@@ -6,5 +6,4 @@ export interface Todo {
   createdAt: Date | string;
  // dateTime?: string;
   Date: Date | null | string
-
 }
