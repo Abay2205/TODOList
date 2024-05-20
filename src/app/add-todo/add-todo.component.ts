@@ -31,6 +31,10 @@ import {LocalStorageService} from "../local-storage.service";
 
 export class AddTodoComponent implements OnInit {
 
+  public readonly addTodo: string = "Add Todo"
+  public readonly dateFormat: string = "MM/DD/YYYY"
+  public readonly timeFormat: string = "hh/mm"
+
   public validateForm = new FormGroup({
     textArea: new FormControl("", [Validators.required, Validators.maxLength(100)]),
     datePicker: new FormControl("", [Validators.required]),
@@ -47,34 +51,35 @@ export class AddTodoComponent implements OnInit {
   }
 
   ngOnInit() {
+    this.minDate = new Date()
+    this.id = 0
   }
 
-  public onSubmit() {
+  public onSubmit(): void {
     if (this.validateForm.valid) {
-      console.log(this.validateForm.value);
+      const dateTime = this.combineDateAndTime();
+
+      if (!dateTime) return;
+      const isLocalEmpty = this.localStore.getData('todos')
+      if(isLocalEmpty!==null){
+        const oldArr = JSON.parse(isLocalEmpty)
+        this.id = oldArr.length + 1
+      } else {
+        this.id = 1
+      }
+      const todo: Todo = {
+        id: this.id,
+        textArea: this.validateForm.value.textArea,
+        createdAt: new Date,
+        Date: dateTime
+      }
+      this.todos.push(todo);
+      this.validateForm.reset();
+      this.localStore.saveData('todos', JSON.stringify(this.todos));
+      console.log(this.todos);
     } else {
       alert('не валидно')
     }
-    const dateTime = this.combineDateAndTime();
-
-    if (!dateTime) return;
-    const isLocalEmpty = this.localStore.getData('todos')
-    if(isLocalEmpty!==null){
-      const oldArr = JSON.parse(isLocalEmpty)
-      this.id = oldArr.length + 1
-    } else {
-      this.id = 1
-    }
-    const todo: Todo = {
-      id: this.id,
-      textArea: this.validateForm.value.textArea,
-      createdAt: new Date,
-      Date: dateTime
-    }
-    this.todos.push(todo);
-    this.validateForm.reset();
-    this.localStore.saveData('todos', JSON.stringify(this.todos));
-    console.log(this.todos);
   }
 
   private combineDateAndTime(): Date | null {

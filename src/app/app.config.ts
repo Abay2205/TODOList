@@ -6,5 +6,5 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import {DatePipe} from "@angular/common";
 
 export const appConfig: ApplicationConfig = {
-  providers: [provideRouter(routes), provideAnimationsAsync(), DatePipe, provideAnimationsAsync()]
+  providers: [provideRouter(routes), provideAnimationsAsync(), DatePipe,]
 };

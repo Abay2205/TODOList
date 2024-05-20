@@ -1,8 +1,8 @@
 <div class="add-todo">
 <mat-card class="todo-card">
   <mat-card-header class="add-todo-header">
-    <mat-card-title>Add Todo</mat-card-title>
-    <mat-card-subtitle>Add Todo</mat-card-subtitle>
+    <mat-card-title>{{addTodo}}</mat-card-title>
+    <mat-card-subtitle>{{addTodo}}</mat-card-subtitle>
   </mat-card-header>
   <mat-card-content class="add-todo-body">
     <form class="add-todo-form" [formGroup]="validateForm">
@@ -16,7 +16,7 @@
       <mat-form-field class="inputForms">
         <mat-label>Choose a date</mat-label>
         <input matInput [min]="minDate" [matDatepicker]="picker" formControlName="datePicker" required>
-        <mat-hint>MM/DD/YYYY</mat-hint>
+        <mat-hint>{{dateFormat}}</mat-hint>
         <mat-error *ngIf="validateForm.controls['datePicker'].errors?.['required']">This is required</mat-error>
         <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
         <mat-datepicker #picker></mat-datepicker>
@@ -24,7 +24,7 @@
       <mat-form-field class="inputForms">
         <mat-label>Choose time</mat-label>
         <input matInput [ngxTimepicker]="timePicker" formControlName="timePicker">
-        <mat-hint>hh/mm</mat-hint>
+        <mat-hint>{{timeFormat}}</mat-hint>
         <ngx-material-timepicker-toggle matIconSuffix  [for]="timePicker"></ngx-material-timepicker-toggle>
         <ngx-material-timepicker #timePicker ></ngx-material-timepicker>
       </mat-form-field>

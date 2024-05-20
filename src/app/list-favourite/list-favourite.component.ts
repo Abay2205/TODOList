@@ -1,4 +1,4 @@
-import {Component, Inject, OnInit, TemplateRef, ViewChild} from '@angular/core';
+import {Component, inject, OnInit, TemplateRef, ViewChild} from '@angular/core';
 import {Todo} from "../todos.interface";
 import {CommonModule} from "@angular/common";
 import {
@@ -39,27 +39,25 @@ export class ListFavouriteComponent implements OnInit {
   readonly title2: string = "My Todo list"
   readonly confirm: string = "Are you sure you want to delete this todo?"
 
-  constructor(
-    private dialog: MatDialog,
-    private localStore: LocalStorageService
-  ) {
-  }
+  constructor() {}
+  private dialog = inject(MatDialog);
+  private localStore = inject(LocalStorageService);
 
-  public displayedColumns: string[] = ['select','id', 'textArea', 'createdAt', 'Date', 'delete'];
+  public displayedColumns: string[] = ['select', 'id', 'textArea', 'createdAt', 'Date', 'delete'];
   public dataSource = new MatTableDataSource<Todo>();
   public dataSource2 = new MatTableDataSource<Todo>();
   public selection = new SelectionModel<any>(true, []);
   public todos: Todo[] = [];
   public today = new Date();
 
-  public isAllSelected() {
+  public isAllSelected(): boolean {
     const numSelected = this.selection.selected.length;
     const numRows = this.dataSource.data.length;
     return numSelected === numRows;
   }
 
 
-  public toggleAllRows() {
+  public toggleAllRows(): void {
     if (this.isAllSelected()) {
       this.selection.clear();
       return;
@@ -101,7 +99,8 @@ export class ListFavouriteComponent implements OnInit {
     console.log(this.todos)
 
   }
-  private filterTodosForToday() {
+
+  private filterTodosForToday(): void {
     const startOfDay = new Date(this.today.getTime());
     const endOfDay = new Date(this.today.setHours(23, 59, 59, 999));
 
@@ -145,14 +144,14 @@ export class ListFavouriteComponent implements OnInit {
   }
 
 
-  private deleteTodo(item: Todo) {
+  private deleteTodo(item: Todo): void {
     const currentRecord = this.todos.findIndex(m => m.id === item.id);
     this.todos.splice(currentRecord, 1);
     this.localStore.saveData('todos', JSON.stringify(this.todos));
     console.log(item.textArea + ' deleted')
   }
 
-  private deleteAllTodos(){
+  private deleteAllTodos(): void {
     this.localStore.clearData()
   }
 
@@ -167,6 +166,7 @@ export class ListFavouriteComponent implements OnInit {
       }
     });
   }
+
   openDialog(): void {
     const dialogRef = this.dialog.open(this.deleteAll, {
       width: '250px'
@@ -179,6 +179,7 @@ export class ListFavouriteComponent implements OnInit {
     });
   }
 }
+
 //TODO СДЕЛАТЬ ЧТОБЫ DATASOURCE БЫЛ 1 ИЛИ ДВА РАЗНЫХ SELECTROWS
 //TODO ВО ВТОРОЙ КАРТОЧКЕ СДЕЛАТЬ EXPIRATION DATE ВМЕСТО TIME
 //TODO ИЗ ВТОРОЙ КАРТОЧКИ УБРАТЬ EXPIRED
