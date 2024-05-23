@@ -1,9 +1,9 @@
-import {DateTime} from "luxon";
-
 export interface Todo {
   id: number;
   textArea?: string | null;
   createdAt: Date | string;
- // dateTime?: string;
-  Date: Date | null | string
+  date: Date | null | string;
+  remainingTime?: string | null
+  createdAtShow? : string
+  favorite?: boolean;
 }

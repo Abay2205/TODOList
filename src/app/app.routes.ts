@@ -7,7 +7,7 @@ export const routes: Routes = [
   {path: '', component: ListFavouriteComponent},
   {path: 'add', component: AddTodoComponent},
   {path: 'list', component: ListFavouriteComponent},
-  {path: 'favourite', component: ListFavouriteComponent},
+  {path: 'favourite', component: ListFavouriteComponent, data: {favorites: true}},
   {path: '404', component: PageNotFoundComponent},
   {path: '**', redirectTo: '/404', pathMatch: 'full'},
 

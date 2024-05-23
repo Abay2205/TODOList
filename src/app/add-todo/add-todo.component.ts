@@ -79,7 +79,8 @@ export class AddTodoComponent implements OnInit {
         id: this.id,
         textArea: this.validateForm.value.textArea,
         createdAt: new Date,
-        Date: dateTime
+        date: dateTime,
+        favorite: false
       }
       this.todos.push(todo);
       this.validateForm.reset();

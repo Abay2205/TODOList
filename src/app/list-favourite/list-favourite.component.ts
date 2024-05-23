@@ -23,6 +23,8 @@ import {
 } from "@angular/material/dialog";
 import {LocalStorageService} from "../local-storage.service";
 import {takeUntilDestroyed} from "@angular/core/rxjs-interop";
+import {DateTime} from "luxon";
+import {ActivatedRoute} from "@angular/router";
 
 
 @Component({
@@ -32,144 +34,99 @@ import {takeUntilDestroyed} from "@angular/core/rxjs-interop";
   templateUrl: './list-favourite.component.html',
   styleUrl: './list-favourite.component.css'
 })
+
 export class ListFavouriteComponent implements OnInit {
 
   @ViewChild('confirmDelete') confirmDelete!: TemplateRef<any>;
   @ViewChild('deleteAll') deleteAll!: TemplateRef<any>;
-  readonly todayTitle: string = "Today Todo's"
-  readonly listTitle: string = "My Todo list"
-  readonly confirm: string = "Are you sure you want to delete this todo?"
-  readonly deleteTitle: string = "Delete Todo"
-  readonly deleteAllTitle: string = "Delete Todo"
 
-  constructor() {
-  }
+  public todayTitle: string = "Today Todo's";
+  readonly listTitle: string = "My Todo list";
+  readonly confirm: string = "Are you sure you want to delete this todo?";
+  readonly deleteTitle: string = "Delete Todo";
+  readonly deleteAllTitle: string = "Delete All Todos";
+
+  public displayedColumns: string[] = ['select', 'textArea', 'createdAtShow', 'remainingTime', 'favorite', 'delete'];
+  public todayDataSource = new MatTableDataSource<Todo>();
+  public listDataSource = new MatTableDataSource<Todo>();
+  public todaySelection = new SelectionModel<Todo>(true, []);
+  public listSelection = new SelectionModel<Todo>(true, []);
+  public todos: Todo[] = [];
+  public today = DateTime.local();
 
   private dialog = inject(MatDialog);
   private localStorageService = inject(LocalStorageService);
+  private route = inject(ActivatedRoute);
   private destroyRef = inject(DestroyRef);
 
-  public displayedColumns: string[] = ['select', 'textArea', 'createdAt', 'Date', 'delete'];
-  public todayDataSource = new MatTableDataSource<Todo>();
-  public listDataSource = new MatTableDataSource<Todo>();
-  public selection = new SelectionModel<any>(true, []);
-  public todos: Todo[] = [];
-  public today = new Date();
-
-  public isAllSelected(): boolean {
-    const numSelected = this.selection.selected.length;
-    const numRows = this.todayDataSource.data.length;
-    return numSelected === numRows;
-  }
-
-
-  public toggleAllRows(): void {
-    if (this.isAllSelected()) {
-      this.selection.clear();
-      return;
-    }
-
-    this.selection.select(...this.todayDataSource.data);
-  }
-
-
-  public checkboxLabel(row?: Todo): string {
-    if (!row) {
-      return `${this.isAllSelected() ? 'deselect' : 'select'} all`;
-    }
-    return `${this.selection.isSelected(row) ? 'deselect' : 'select'} row ${row.id + 1}`;
-  }
-
-
   ngOnInit() {
-    const storedTodos = this.localStorageService.getData('todos');
+    const favorites = this.route.snapshot.data['favorites'];
+    const storedTodos = this.localStorageService.getData('todos')
+    this.todayTitle = favorites ? "Favorite Todos" : this.todayTitle
     if (storedTodos) {
       this.todos = JSON.parse(storedTodos);
+      this.todos = favorites ? this.todos?.filter(todo => todo.favorite) : this.todos
       this.filterTodosForToday();
-      this.todos.forEach(todo => {
-        if (todo.Date) {
-          const todoDate = new Date(todo.Date);
-          todoDate.setHours(0, 0, 0, 0);
-          this.today.setHours(0, 0, 0, 0);
-          if (todoDate.getTime() === this.today.getTime()) {
-            todo.Date = this.calculateRemainingTime(todo.Date);
-          } else {
-            const combinedDateTime = new Date(todo.Date);
-            const formattedDateTime = combinedDateTime.toLocaleString('en-US', {
-              month: 'short',
-              day: '2-digit',
-              year: 'numeric'
-            });
-            todo.Date = formattedDateTime;
-          }
-        }
-        if (todo.createdAt) {
-          const combinedDateTime = new Date(todo.createdAt);
-          const formattedDateTime = combinedDateTime.toLocaleString('en-US', {
-            month: 'short',
-            day: '2-digit',
-            year: 'numeric'
-          });
-          todo.createdAt = formattedDateTime;
-        }
-      });
-
+      this.processTodos();
+      console.log(this.todos)
     }
+  }
+
+  toggleFavorite(todo: Todo): void {
+    todo.favorite = !todo.favorite;
+    // Сохраните изменения в localStorage или в вашем сервисе, если нужно
+    this.localStorageService.saveData('todos', JSON.stringify(this.todos));
+  }
+
+  private processTodos(): void {
+    this.todos.forEach(todo => {
+      if (todo.date) {
+        const todoDate = DateTime.fromISO(todo.date as string);
+        todo.remainingTime = this.calculateRemainingTime(todoDate);
+        if (todo.remainingTime === 'Expired') {
+          todo.remainingTime = null;
+        }
+      }
+      if (todo.createdAt) {
+        const createdAt = DateTime.fromISO(todo.createdAt as string);
+        todo.createdAtShow = createdAt.toLocaleString(DateTime.DATE_MED);
+      }
+    });
   }
 
   private filterTodosForToday(): void {
-    const startOfDay = new Date(this.today.getTime());
-    const endOfDay = new Date(this.today.setHours(23, 59, 59, 999));
+    const startOfDay = this.today.startOf('day');
+    const endOfDay = this.today.endOf('day');
 
     const filteredTodos = this.todos.filter(todo => {
-      if (!todo.Date) {
-        console.log('false');
-        return false;
-      }
-      const todoDate = new Date(todo.Date);
-      return todoDate >= startOfDay && todoDate <= endOfDay;
+      if (!todo.date) return false;
+      const todoDate = DateTime.fromISO(todo.date as string);
+      return todoDate >= startOfDay && todoDate <= endOfDay && todo.remainingTime !== null;
     });
-    this.todayDataSource.data = filteredTodos
-    const remainingTodos = this.todos.filter(todo => !filteredTodos.includes(todo));
-    this.listDataSource.data = remainingTodos;
+
+    this.todayDataSource.data = filteredTodos;
+    this.listDataSource.data = this.todos.filter(todo => !filteredTodos.includes(todo) || todo.remainingTime === null);
   }
 
-  private calculateRemainingTime(expirationDate: string | Date): string | Date {
-    const now = new Date();
-    const expiryDate = new Date(expirationDate);
-    const timeDifference = expiryDate.getTime() - now.getTime();
-
-    if (timeDifference <= 0) {
-      return expirationDate + ' expired';
-    }
-
-    const days = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((timeDifference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((timeDifference % (1000 * 60 * 60)) / (1000 * 60));
-
-    let remainingTime = '';
-    if (days > 0) {
-      remainingTime += `${days}d `;
-    }
-    if (hours > 0 || days > 0) {
-      remainingTime += `${hours}h `;
-    }
-    remainingTime += `${minutes}m`;
-
-    return remainingTime;
+  public isAllSelected(dataSource: MatTableDataSource<Todo>, selection: SelectionModel<Todo>): boolean {
+    const numSelected = selection.selected.length;
+    const numRows = dataSource.data.length;
+    return numSelected === numRows;
   }
 
-
-  private deleteTodo(item: Todo): void {
-    const currentRecord = this.todos.findIndex(m => m.id === item.id);
-    this.todos.splice(currentRecord, 1);
-    this.localStorageService.saveData('todos', JSON.stringify(this.todos));
-    this.localStorageService.removeData('id')
-    console.log(item.textArea + ' deleted')
+  public toggleAllRows(dataSource: MatTableDataSource<Todo>, selection: SelectionModel<Todo>): void {
+    if (this.isAllSelected(dataSource, selection)) {
+      selection.clear();
+    } else {
+      selection.select(...dataSource.data);
+    }
   }
 
-  private deleteAllTodos(): void {
-    this.localStorageService.clearData()
+  public checkboxLabel(row?: Todo | null, selection?: SelectionModel<Todo>): string {
+    if (!row) {
+      return `${selection && this.isAllSelected(this.todayDataSource, selection) ? 'deselect' : 'select'} all`;
+    }
+    return `${selection && selection.isSelected(row) ? 'deselect' : 'select'} row ${row.id + 1}`;
   }
 
   public openConfirmationModal(row: Todo): void {
@@ -180,10 +137,10 @@ export class ListFavouriteComponent implements OnInit {
     dialogRef.afterClosed()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(result => {
-      if (result) {
-        this.deleteTodo(row);
-      }
-    });
+        if (result) {
+          this.deleteTodo(row);
+        }
+      });
   }
 
   openDialog(): void {
@@ -193,15 +150,43 @@ export class ListFavouriteComponent implements OnInit {
     dialogRef.afterClosed()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(result => {
-      if (result) {
-        alert("delete all todos")
-        this.deleteAllTodos()
-      }
-    });
+        if (result) {
+          this.deleteAllTodos();
+        }
+      });
+  }
+
+  private deleteTodo(item: Todo): void {
+    const index = this.todos.findIndex(todo => todo.id === item.id);
+    if (index !== -1) {
+      this.todos.splice(index, 1);
+      this.localStorageService.saveData('todos', JSON.stringify(this.todos));
+      this.filterTodosForToday();
+    }
+  }
+
+  private deleteAllTodos(): void {
+    this.todos = [];
+    this.localStorageService.clearData();
+    this.filterTodosForToday();
+  }
+
+  private calculateRemainingTime(expiryDate: DateTime): string {
+    const now = DateTime.local();
+    const diff = expiryDate.diff(now, ['days', 'hours', 'minutes']);
+
+    if (diff.as('milliseconds') <= 0) {
+      return 'Expired';
+    }
+
+    let remainingTime = '';
+    if (diff.days > 0) remainingTime += `${Math.floor(diff.days)}d `;
+    if (diff.hours > 0 || diff.days > 0) remainingTime += `${Math.floor(diff.hours)}h `;
+    remainingTime += `${Math.floor(diff.minutes)}m`;
+
+    return remainingTime;
   }
 }
 
-//TODO СДЕЛАТЬ ЧТОБЫ DATASOURCE БЫЛ 1 ИЛИ ДВА РАЗНЫХ SELECTROWS
 //TODO ИЗ ВТОРОЙ КАРТОЧКИ УБРАТЬ EXPIRED
-//TODO СДЕЛАТЬ ВРЕМЯ КРАСНЫМ ЕСЛИ ОСТАЛОСЬ МЕНЬШЕ ЧАСА
 //
