@@ -1,0 +1,30 @@
+.add-todo{
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  padding: 50px;
+}
+.todo-card {
+  align-items: center;
+  width: 40vw;
+}
+.add-todo-header {
+  justify-content: center;
+  background-color: lightgray;
+  width: 100%;
+  padding: 0;
+}
+
+.add-todo-body {
+  padding: 10px;
+}
+.add-todo-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.inputForms {
+  width: 20vw;
+}
+
+

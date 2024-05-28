@@ -1,0 +1,148 @@
+<div class="todayTodo">
+  <mat-card class="todayTodoCard">
+    <mat-card-header class="todayCardHeader">
+      <mat-card-title>{{ todayTitle }}</mat-card-title>
+    </mat-card-header>
+    <mat-card-content class="todayCardBody">
+      <table mat-table [dataSource]="todayDataSource" class="mat-elevation-z8">
+
+        <!-- Checkbox Column -->
+        <ng-container matColumnDef="select">
+          <th mat-header-cell *matHeaderCellDef>
+            <mat-checkbox (change)="$event ? toggleAllRows(todayDataSource, todaySelection) : null"
+                          [checked]="todaySelection.hasValue() && isAllSelected(todayDataSource, todaySelection)"
+                          [indeterminate]="todaySelection.hasValue() && !isAllSelected(todayDataSource, todaySelection)"
+                          [aria-label]="checkboxLabel(null, todaySelection)">
+            </mat-checkbox>
+          </th>
+          <td mat-cell *matCellDef="let row">
+            <mat-checkbox (click)="$event.stopPropagation()"
+                          (change)="$event ? todaySelection.toggle(row) : null"
+                          [checked]="todaySelection.isSelected(row)"
+                          [aria-label]="checkboxLabel(row, todaySelection)">
+            </mat-checkbox>
+          </td>
+        </ng-container>
+
+        <!-- Today Todo's -->
+        <ng-container *ngFor="let property of ['textArea', 'createdAtShow', 'remainingTime']">
+          <ng-container matColumnDef="{{ property }}">
+            <th mat-header-cell *matHeaderCellDef> {{ property }} </th>
+            <td mat-cell *matCellDef="let element">
+              <span
+                [ngStyle]="{ 'color': property === 'remainingTime' && element[property] !== 'Expired' && element[property].includes('m') && !element[property].includes('h') ? 'red' : 'inherit' }">
+                {{ element[property] }}
+              </span>
+            </td>
+          </ng-container>
+        </ng-container>
+        <ng-container matColumnDef="favorite">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let element">
+            <button mat-icon-button (click)="toggleFavorite(element)">
+              <mat-icon>{{ element.favorite ? 'favorite' : 'favorite_border' }}</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="delete">
+          <th mat-header-cell *matHeaderCellDef>
+            <button mat-icon-button color="warn" [disabled]="!isAllSelected(todayDataSource, todaySelection)"
+                    (click)="openDialog()">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </th>
+          <td mat-cell *matCellDef="let row">
+            <button mat-icon-button color="warn" [disabled]="!todaySelection.isSelected(row)"
+                    (click)="openConfirmationModal(row)">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      </table>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="todayTodoCard">
+    <mat-card-header class="todayCardHeader">
+      <mat-card-title>{{ listTitle }}</mat-card-title>
+    </mat-card-header>
+    <mat-card-content class="todayCardBody">
+      <table mat-table [dataSource]="listDataSource" class="mat-elevation-z8">
+
+        <!-- Checkbox Column -->
+        <ng-container matColumnDef="select">
+          <th mat-header-cell *matHeaderCellDef>
+            <mat-checkbox (change)="$event ? toggleAllRows(listDataSource, listSelection) : null"
+                          [checked]="listSelection.hasValue() && isAllSelected(listDataSource, listSelection)"
+                          [indeterminate]="listSelection.hasValue() && !isAllSelected(listDataSource, listSelection)"
+                          [aria-label]="checkboxLabel(null, listSelection)">
+            </mat-checkbox>
+          </th>
+          <td mat-cell *matCellDef="let row">
+            <mat-checkbox (click)="$event.stopPropagation()"
+                          (change)="$event ? listSelection.toggle(row) : null"
+                          [checked]="listSelection.isSelected(row)"
+                          [aria-label]="checkboxLabel(row, listSelection)">
+            </mat-checkbox>
+          </td>
+        </ng-container>
+
+        <!-- My Todo list -->
+        <ng-container *ngFor="let property of ['textArea', 'createdAtShow', 'remainingTime']">
+          <ng-container matColumnDef="{{ property }}">
+            <th mat-header-cell *matHeaderCellDef> {{ property }} </th>
+            <td mat-cell *matCellDef="let element"> {{ element[property] }} </td>
+          </ng-container>
+        </ng-container>
+        <ng-container matColumnDef="favorite">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let element">
+            <button mat-icon-button (click)="toggleFavorite(element)">
+              <mat-icon>{{ element.favorite ? 'favorite' : 'favorite_border' }}</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="delete">
+          <th mat-header-cell *matHeaderCellDef>
+            <button mat-icon-button color="warn" [disabled]="!isAllSelected(listDataSource, listSelection)"
+                    (click)="openDialog()">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </th>
+          <td mat-cell *matCellDef="let row">
+            <button mat-icon-button color="warn" [disabled]="!listSelection.isSelected(row)"
+                    (click)="openConfirmationModal(row)">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      </table>
+    </mat-card-content>
+  </mat-card>
+</div>
+<ng-template #confirmDelete let-data>
+  <h2 mat-dialog-title>{{deleteTitle}}</h2>
+  <mat-dialog-content>
+    {{confirm}}
+  </mat-dialog-content>
+  <mat-dialog-actions>
+    <button mat-button [mat-dialog-close]="true">Yes</button>
+    <button mat-button [mat-dialog-close]="false">No</button>
+  </mat-dialog-actions>
+</ng-template>
+<ng-template #deleteAll let-data>
+  <h2 mat-dialog-title>{{deleteAllTitle}}</h2>
+  <mat-dialog-content>
+    {{confirm}}
+  </mat-dialog-content>
+  <mat-dialog-actions>
+    <button mat-button [mat-dialog-close]="true">Yes</button>
+    <button mat-button [mat-dialog-close]="false">No</button>
+  </mat-dialog-actions>
+</ng-template>
