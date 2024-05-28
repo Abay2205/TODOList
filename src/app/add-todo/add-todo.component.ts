@@ -46,19 +46,15 @@ export class AddTodoComponent implements OnInit {
     datePicker: new FormControl("", [Validators.required]),
     timePicker: new FormControl("")
   });
-  private localStorageService = inject(LocalStorageService);
   public todos: Todo[] = [];
   public minDate: Date = new Date();
   public id: number = 0;
 
-  constructor() {
-
-  }
+  private localStorageService = inject(LocalStorageService);
+  private readonly todosKey = 'todos';
 
   ngOnInit() {
-    this.todos = this.localStorageService.getData('todos')
-      ? JSON.parse(this.localStorageService.getData('todos') || '')
-      : [];
+    this.todos = this.localStorageService.getData(this.todosKey)
     this.minDate = new Date()
     this.id = 0;
   }
@@ -68,9 +64,8 @@ export class AddTodoComponent implements OnInit {
       const dateTime = this.combineDateAndTime();
 
       if (!dateTime) return;
-      const isLocalEmpty = this.localStorageService.getData('todos')
-      if(isLocalEmpty!==null){
-        const oldArr = JSON.parse(isLocalEmpty)
+      const oldArr = this.localStorageService.getData(this.todosKey)
+      if (oldArr !== null) {
         this.id = oldArr.length + 1
       } else {
         this.id = 1
@@ -84,7 +79,7 @@ export class AddTodoComponent implements OnInit {
       }
       this.todos.push(todo);
       this.validateForm.reset();
-      this.localStorageService.saveData('todos', JSON.stringify(this.todos));
+      this.localStorageService.saveData(this.todosKey, this.todos);
       console.log(this.todos);
     } else {
       alert('не валидно')

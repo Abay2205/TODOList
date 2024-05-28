@@ -4,26 +4,26 @@
   justify-content: center;
   padding: 50px;
 }
-.todo-card {
+.add-todo_card {
   align-items: center;
   width: 40vw;
 }
-.add-todo-header {
+.add-todo_header {
   justify-content: center;
   background-color: lightgray;
   width: 100%;
   padding: 0;
 }
 
-.add-todo-body {
+.add-todo_body {
   padding: 10px;
 }
-.add-todo-form {
+.add-todo_form {
   display: flex;
   flex-direction: column;
   align-items: center;
 }
-.inputForms {
+.input-forms {
   width: 20vw;
 }
 

@@ -1,18 +1,18 @@
-.todayTodo {
+.today-todo {
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   padding: 50px;
 }
-.todayTodoCard{
+.today-todo_card{
   width: 70vw;
   margin-bottom: 50px;
 }
-.todayCardHeader {
+.today-card_header {
   background-color: lightgray;
 }
-.todayCardBody{
+.today-card_body{
   padding: 30px;
 }
 
