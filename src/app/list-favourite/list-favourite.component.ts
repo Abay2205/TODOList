@@ -10,7 +10,7 @@ import {
   MatTableDataSource
 } from "@angular/material/table";
 import {SelectionModel} from "@angular/cdk/collections";
-import {MatCheckbox} from "@angular/material/checkbox";
+import {MatCheckbox, MatCheckboxChange} from "@angular/material/checkbox";
 import {MatCard, MatCardContent, MatCardHeader, MatCardSubtitle, MatCardTitle} from "@angular/material/card";
 import {MatButton, MatIconButton} from "@angular/material/button";
 import {MatIcon} from "@angular/material/icon";
@@ -40,42 +40,63 @@ export class ListFavouriteComponent implements OnInit {
   @ViewChild('confirmDelete') confirmDelete!: TemplateRef<any>;
   @ViewChild('deleteAll') deleteAll!: TemplateRef<any>;
 
-  public todayTitle: string = "Today Todo's";
-  readonly listTitle: string = "My Todo list";
-  readonly confirm: string = "Are you sure you want to delete this todo?";
-  readonly deleteTitle: string = "Delete Todo";
-  readonly deleteAllTitle: string = "Delete All Todos";
 
-  public displayedColumns: string[] = ['select', 'textArea', 'createdAtShow', 'remainingTime', 'favorite', 'delete'];
+  public readonly listTitle: string = "My Todo list";
+  public readonly confirm: string = "Are you sure you want to delete this todo?";
+  public readonly deleteTitle: string = "Delete Todo";
+  public readonly deleteAllTitle: string = "Delete All Todo's";
+  public readonly todayColumns: string[] = ['textArea', 'createdAtShow', 'remainingTime'];
+  public readonly listColumns: string[] = ['textArea', 'createdAtShow', 'dateShow', 'remainingTime'];
+
+  public todayTitle: string = "Today Todo's";
+  public todayDisplayedColumns: string[] = ['select', 'textArea', 'createdAtShow', 'remainingTime', 'favorite', 'delete'];
+  public listDisplayedColumns: string[] = ['select', 'textArea', 'createdAtShow', 'dateShow', 'favorite', 'delete'];
   public todayDataSource = new MatTableDataSource<Todo>();
   public listDataSource = new MatTableDataSource<Todo>();
+  public favoriteDataSource = new MatTableDataSource<Todo>();
   public todaySelection = new SelectionModel<Todo>(true, []);
   public listSelection = new SelectionModel<Todo>(true, []);
+  public favoriteSelection = new SelectionModel<Todo>(true, []);
   public todos: Todo[] = [];
   public today = DateTime.local();
+  public isFavoritesView: boolean = false;
 
   private dialog = inject(MatDialog);
   private localStorageService = inject(LocalStorageService);
   private route = inject(ActivatedRoute);
   private destroyRef = inject(DestroyRef);
+  private readonly todosKey = 'todos';
+
 
   ngOnInit() {
     const favorites = this.route.snapshot.data['favorites'];
-    const storedTodos = this.localStorageService.getData('todos')
+    this.todos = this.localStorageService.getData(this.todosKey);
+    this.isFavoritesView = !!favorites;
     this.todayTitle = favorites ? "Favorite Todos" : this.todayTitle
-    if (storedTodos) {
-      this.todos = JSON.parse(storedTodos);
-      this.todos = favorites ? this.todos?.filter(todo => todo.favorite) : this.todos
+    if (favorites) {
+      this.favoriteDataSource.data = this.todos.filter(todo => todo.favorite);
+    } else {
       this.filterTodosForToday();
-      this.processTodos();
-      console.log(this.todos)
+    }
+    this.processTodos();
+  }
+
+  toggleRow(event: MatCheckboxChange, row: Todo, selection: SelectionModel<Todo>) {
+    if (event) {
+      selection.toggle(row)
+    } else {
+      return;
     }
   }
 
   toggleFavorite(todo: Todo): void {
     todo.favorite = !todo.favorite;
-    // Сохраните изменения в localStorage или в вашем сервисе, если нужно
-    this.localStorageService.saveData('todos', JSON.stringify(this.todos));
+    this.localStorageService.saveData(this.todosKey, this.todos);
+    if (this.isFavoritesView) {
+      this.favoriteDataSource.data = this.todos.filter(todo => todo.favorite);
+    } else {
+      this.filterTodosForToday();
+    }
   }
 
   private processTodos(): void {
@@ -83,9 +104,7 @@ export class ListFavouriteComponent implements OnInit {
       if (todo.date) {
         const todoDate = DateTime.fromISO(todo.date as string);
         todo.remainingTime = this.calculateRemainingTime(todoDate);
-        if (todo.remainingTime === 'Expired') {
-          todo.remainingTime = null;
-        }
+        todo.dateShow = todoDate.toLocaleString(DateTime.DATE_MED)
       }
       if (todo.createdAt) {
         const createdAt = DateTime.fromISO(todo.createdAt as string);
@@ -95,17 +114,22 @@ export class ListFavouriteComponent implements OnInit {
   }
 
   private filterTodosForToday(): void {
-    const startOfDay = this.today.startOf('day');
     const endOfDay = this.today.endOf('day');
 
     const filteredTodos = this.todos.filter(todo => {
       if (!todo.date) return false;
       const todoDate = DateTime.fromISO(todo.date as string);
-      return todoDate >= startOfDay && todoDate <= endOfDay && todo.remainingTime !== null;
+      return todoDate >= DateTime.now() && todoDate <= endOfDay;
     });
 
     this.todayDataSource.data = filteredTodos;
-    this.listDataSource.data = this.todos.filter(todo => !filteredTodos.includes(todo) || todo.remainingTime === null);
+    const validTodos = this.todos.filter(todo => {
+      if (!todo.date) return true;
+      const todoDate = DateTime.fromISO(todo.date as string);
+      return todoDate > this.today;
+    });
+
+    this.listDataSource.data = validTodos.filter(todo => !filteredTodos.includes(todo));
   }
 
   public isAllSelected(dataSource: MatTableDataSource<Todo>, selection: SelectionModel<Todo>): boolean {
@@ -160,9 +184,9 @@ export class ListFavouriteComponent implements OnInit {
     const index = this.todos.findIndex(todo => todo.id === item.id);
     if (index !== -1) {
       this.todos.splice(index, 1);
-      this.localStorageService.saveData('todos', JSON.stringify(this.todos));
-      this.filterTodosForToday();
+      this.localStorageService.saveData(this.todosKey, this.todos);
     }
+    this.filterTodosForToday();
   }
 
   private deleteAllTodos(): void {
@@ -188,5 +212,4 @@ export class ListFavouriteComponent implements OnInit {
   }
 }
 
-//TODO ИЗ ВТОРОЙ КАРТОЧКИ УБРАТЬ EXPIRED
-//
+
