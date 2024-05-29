@@ -1,4 +1,4 @@
-import {Component, DestroyRef, inject, OnInit, TemplateRef, ViewChild} from '@angular/core';
+import {Component, DestroyRef, inject, OnDestroy, OnInit, TemplateRef, ViewChild} from '@angular/core';
 import {Todo} from "../todos.interface";
 import {CommonModule} from "@angular/common";
 import {
@@ -25,6 +25,7 @@ import {LocalStorageService} from "../local-storage.service";
 import {takeUntilDestroyed} from "@angular/core/rxjs-interop";
 import {DateTime} from "luxon";
 import {ActivatedRoute} from "@angular/router";
+import {Subject, Subscription, takeUntil} from "rxjs";
 
 
 @Component({
@@ -35,7 +36,7 @@ import {ActivatedRoute} from "@angular/router";
   styleUrl: './list-favourite.component.css'
 })
 
-export class ListFavouriteComponent implements OnInit {
+export class ListFavouriteComponent implements OnInit, OnDestroy {
 
   @ViewChild('confirmDelete') confirmDelete!: TemplateRef<any>;
   @ViewChild('deleteAll') deleteAll!: TemplateRef<any>;
@@ -64,29 +65,56 @@ export class ListFavouriteComponent implements OnInit {
   private dialog = inject(MatDialog);
   private localStorageService = inject(LocalStorageService);
   private route = inject(ActivatedRoute);
-  private destroyRef = inject(DestroyRef);
   private readonly todosKey = 'todos';
+  private destroy$ = new Subject<void>();
 
 
   ngOnInit() {
+
     const favorites = this.route.snapshot.data['favorites'];
-    this.todos = this.localStorageService.getData(this.todosKey);
+     this.todos = this.localStorageService.getData(this.todosKey); //вот это не понимаю зачем нужно убираю все так же работает
+
+
     this.isFavoritesView = !!favorites;
-    this.todayTitle = favorites ? "Favorite Todos" : this.todayTitle
-    if (favorites) {
-      this.favoriteDataSource.data = this.todos.filter(todo => todo.favorite);
-    } else {
-      this.filterTodosForToday();
-    }
-    this.processTodos();
+    this.todayTitle = favorites ? "Favorite Todos" : this.todayTitle;
+
+
+    if (favorites) {                                                                        //как
+      this.favoriteDataSource.data = this.todos.filter(todo => todo.favorite);       //и
+    } else {                                                                                 //все
+      this.filterTodosForToday();                                                            //это
+    }                                                                                         //хз
+    this.processTodos();                                                                      //зачем чат оставил
+
+    // Подписка на изменения данных
+    this.localStorageService.todo$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(todos => {
+        this.todos = todos;
+        if (this.isFavoritesView) {
+          this.todayTitle = favorites ? "Favorite Todos" : this.todayTitle;
+          this.favoriteDataSource.data = this.todos.filter(todo => todo.favorite);
+        } else {
+          this.filterTodosForToday();
+        }
+        this.processTodos();
+      });
+
+    // this.localStorageService.todo$        //Думал если это вставлю будет обновляться после создания тудушки без обновления страницы
+    //   .subscribe(todos => {                //Когда жму кнопку в избранное эмитятся изменения это круто
+    //     this.todos = todos;                // Когда в роуте favorites жму в избранное изменения не эмитятся не круто
+    //     console.log('Updated todos:', this.todos);
+    //   });
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   toggleRow(event: MatCheckboxChange, row: Todo, selection: SelectionModel<Todo>) {
-    if (event) {
-      selection.toggle(row)
-    } else {
-      return;
-    }
+    if (!event) return;
+    selection.toggle(row);
   }
 
   toggleFavorite(todo: Todo): void {
@@ -104,7 +132,7 @@ export class ListFavouriteComponent implements OnInit {
       if (todo.date) {
         const todoDate = DateTime.fromISO(todo.date as string);
         todo.remainingTime = this.calculateRemainingTime(todoDate);
-        todo.dateShow = todoDate.toLocaleString(DateTime.DATE_MED)
+        todo.dateShow = todoDate.toLocaleString(DateTime.DATE_MED);
       }
       if (todo.createdAt) {
         const createdAt = DateTime.fromISO(todo.createdAt as string);
@@ -115,7 +143,6 @@ export class ListFavouriteComponent implements OnInit {
 
   private filterTodosForToday(): void {
     const endOfDay = this.today.endOf('day');
-
     const filteredTodos = this.todos.filter(todo => {
       if (!todo.date) return false;
       const todoDate = DateTime.fromISO(todo.date as string);
@@ -156,10 +183,10 @@ export class ListFavouriteComponent implements OnInit {
   public openConfirmationModal(row: Todo): void {
     const dialogRef = this.dialog.open(this.confirmDelete, {
       width: '250px',
-      data: {todo: row}
+      data: { todo: row }
     });
     dialogRef.afterClosed()
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(takeUntil(this.destroy$))
       .subscribe(result => {
         if (result) {
           this.deleteTodo(row);
@@ -167,12 +194,12 @@ export class ListFavouriteComponent implements OnInit {
       });
   }
 
-  openDialog(): void {
+  public openDialog(): void {
     const dialogRef = this.dialog.open(this.deleteAll, {
       width: '250px'
     });
     dialogRef.afterClosed()
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(takeUntil(this.destroy$))
       .subscribe(result => {
         if (result) {
           this.deleteAllTodos();
@@ -181,18 +208,11 @@ export class ListFavouriteComponent implements OnInit {
   }
 
   private deleteTodo(item: Todo): void {
-    const index = this.todos.findIndex(todo => todo.id === item.id);
-    if (index !== -1) {
-      this.todos.splice(index, 1);
-      this.localStorageService.saveData(this.todosKey, this.todos);
-    }
-    this.filterTodosForToday();
+    this.localStorageService.deleteTodo(item.id);
   }
 
   private deleteAllTodos(): void {
-    this.todos = [];
     this.localStorageService.clearData();
-    this.filterTodosForToday();
   }
 
   private calculateRemainingTime(expiryDate: DateTime): string {
