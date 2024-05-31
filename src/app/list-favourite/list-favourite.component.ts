@@ -25,7 +25,7 @@ import {LocalStorageService} from "../local-storage.service";
 import {takeUntilDestroyed} from "@angular/core/rxjs-interop";
 import {DateTime} from "luxon";
 import {ActivatedRoute} from "@angular/router";
-import {Subject, Subscription, takeUntil} from "rxjs";
+import {map, Observable, of, Subject, Subscription, takeUntil} from "rxjs";
 
 
 @Component({
@@ -59,7 +59,6 @@ export class ListFavouriteComponent implements OnInit, OnDestroy {
   public listSelection = new SelectionModel<Todo>(true, []);
   public favoriteSelection = new SelectionModel<Todo>(true, []);
   public todos: Todo[] = [];
-  public today = DateTime.local();
   public isFavoritesView: boolean = false;
 
   private dialog = inject(MatDialog);
@@ -70,41 +69,32 @@ export class ListFavouriteComponent implements OnInit, OnDestroy {
 
 
   ngOnInit() {
-
     const favorites = this.route.snapshot.data['favorites'];
-     this.todos = this.localStorageService.getData(this.todosKey); //вот это не понимаю зачем нужно убираю все так же работает
-
-
     this.isFavoritesView = !!favorites;
     this.todayTitle = favorites ? "Favorite Todos" : this.todayTitle;
 
-
-    if (favorites) {                                                                        //как
-      this.favoriteDataSource.data = this.todos.filter(todo => todo.favorite);       //и
-    } else {                                                                                 //все
-      this.filterTodosForToday();                                                            //это
-    }                                                                                         //хз
-    this.processTodos();                                                                      //зачем чат оставил
-
-    // Подписка на изменения данных
-    this.localStorageService.todo$
+    //Не знаю наверное надо было сделать combineLatest с этими потоками да? и выводить в зависимости от того какой нужен
+    this.localStorageService.todayTodos$
       .pipe(takeUntil(this.destroy$))
-      .subscribe(todos => {
-        this.todos = todos;
-        if (this.isFavoritesView) {
-          this.todayTitle = favorites ? "Favorite Todos" : this.todayTitle;
-          this.favoriteDataSource.data = this.todos.filter(todo => todo.favorite);
-        } else {
-          this.filterTodosForToday();
-        }
-        this.processTodos();
+      .subscribe(todayTodos => {
+        this.todayDataSource.data = todayTodos
+        this.processTodos(todayTodos)
+        console.log(todayTodos)
+      })
+    this.localStorageService.validTodos$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(validTodos => {
+        this.listDataSource.data = validTodos;
+        this.processTodos(validTodos)
+        console.log(validTodos)
       });
-
-    // this.localStorageService.todo$        //Думал если это вставлю будет обновляться после создания тудушки без обновления страницы
-    //   .subscribe(todos => {                //Когда жму кнопку в избранное эмитятся изменения это круто
-    //     this.todos = todos;                // Когда в роуте favorites жму в избранное изменения не эмитятся не круто
-    //     console.log('Updated todos:', this.todos);
-    //   });
+    this.localStorageService.favoriteTodos$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(favoriteTodos => {
+        this.favoriteDataSource.data = favoriteTodos;
+        this.processTodos(favoriteTodos)
+        console.log(favoriteTodos)
+      });
   }
 
   ngOnDestroy() {
@@ -119,16 +109,11 @@ export class ListFavouriteComponent implements OnInit, OnDestroy {
 
   toggleFavorite(todo: Todo): void {
     todo.favorite = !todo.favorite;
-    this.localStorageService.saveData(this.todosKey, this.todos);
-    if (this.isFavoritesView) {
-      this.favoriteDataSource.data = this.todos.filter(todo => todo.favorite);
-    } else {
-      this.filterTodosForToday();
-    }
+    this.localStorageService.addTodoOrUpdate(todo);
   }
 
-  private processTodos(): void {
-    this.todos.forEach(todo => {
+  private processTodos(todos: Todo[]): void {
+    todos.forEach(todo => {
       if (todo.date) {
         const todoDate = DateTime.fromISO(todo.date as string);
         todo.remainingTime = this.calculateRemainingTime(todoDate);
@@ -139,24 +124,6 @@ export class ListFavouriteComponent implements OnInit, OnDestroy {
         todo.createdAtShow = createdAt.toLocaleString(DateTime.DATE_MED);
       }
     });
-  }
-
-  private filterTodosForToday(): void {
-    const endOfDay = this.today.endOf('day');
-    const filteredTodos = this.todos.filter(todo => {
-      if (!todo.date) return false;
-      const todoDate = DateTime.fromISO(todo.date as string);
-      return todoDate >= DateTime.now() && todoDate <= endOfDay;
-    });
-
-    this.todayDataSource.data = filteredTodos;
-    const validTodos = this.todos.filter(todo => {
-      if (!todo.date) return true;
-      const todoDate = DateTime.fromISO(todo.date as string);
-      return todoDate > this.today;
-    });
-
-    this.listDataSource.data = validTodos.filter(todo => !filteredTodos.includes(todo));
   }
 
   public isAllSelected(dataSource: MatTableDataSource<Todo>, selection: SelectionModel<Todo>): boolean {
@@ -183,7 +150,7 @@ export class ListFavouriteComponent implements OnInit, OnDestroy {
   public openConfirmationModal(row: Todo): void {
     const dialogRef = this.dialog.open(this.confirmDelete, {
       width: '250px',
-      data: { todo: row }
+      data: {todo: row}
     });
     dialogRef.afterClosed()
       .pipe(takeUntil(this.destroy$))
