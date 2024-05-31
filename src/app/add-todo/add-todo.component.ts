@@ -14,6 +14,8 @@ import {NgxMaterialTimepickerModule} from "ngx-material-timepicker";
 import {MatCardActions, MatCardContent, MatCardHeader} from "@angular/material/card";
 import {Todo} from "../todos.interface";
 import {LocalStorageService} from "../local-storage.service";
+import {Router} from "@angular/router";
+import {combineLatest, debounceTime, distinctUntilChanged, filter} from "rxjs";
 
 
 @Component({
@@ -40,6 +42,7 @@ export class AddTodoComponent implements OnInit {
   public readonly chooseDate: string = "Choose date"
   public readonly chooseTime: string = "Choose time"
   public readonly createTodo: string = "Create Todo"
+  private readonly todosKey = 'todos';
 
   public validateForm = new FormGroup({
     textArea: new FormControl("", [Validators.required, Validators.maxLength(100)]),
@@ -50,26 +53,44 @@ export class AddTodoComponent implements OnInit {
   public minDate: Date = new Date();
   public id: number = 0;
 
+  private router = inject(Router);
   private localStorageService = inject(LocalStorageService);
-  private readonly todosKey = 'todos';
 
   ngOnInit() {
-    this.todos = this.localStorageService.getData(this.todosKey)
     this.minDate = new Date()
     this.id = 0;
+    const controls = Object.values(this.validateForm.controls);
+
+    //эта подписка выводит сообщение если форма заполнена
+    combineLatest(controls.map(control => control.valueChanges)).pipe(
+      // Используем debounceTime для задержки отправки значений на 500 мс
+      debounceTime(500),
+      // Используем distinctUntilChanged для фильтрации одинаковых значений
+      distinctUntilChanged((prev, curr) => JSON.stringify(prev) === JSON.stringify(curr)),
+      filter(values => values.every(value => !!value))
+    ).subscribe(values => {
+      console.log('All fields are filled:', values);
+    })
+
+    //эта подписка для отслеживания изменений
+    this.localStorageService.todo$
+      .subscribe(todos => {
+        this.todos = todos;
+        console.log('Updated todos:', this.todos);
+      });
   }
 
   public onSubmit(): void {
     if (this.validateForm.valid) {
       const dateTime = this.combineDateAndTime();
 
-      if (!dateTime) return;
-      const oldArr = this.localStorageService.getData(this.todosKey)
-      if (oldArr !== null) {
-        this.id = oldArr.length + 1
-      } else {
-        this.id = 1
+      if (!dateTime) {
+        console.log(dateTime)
+        return;
       }
+      const todos = this.localStorageService.getData(this.todosKey);
+      this.id = todos.length ? Math.max(...todos.map((todo: Todo) => todo.id)) + 1 : 1;
+
       const todo: Todo = {
         id: this.id,
         textArea: this.validateForm.value.textArea,
@@ -77,9 +98,9 @@ export class AddTodoComponent implements OnInit {
         date: dateTime,
         favorite: false
       }
-      this.todos.push(todo);
+      this.localStorageService.addTodo(todo);
       this.validateForm.reset();
-      this.localStorageService.saveData(this.todosKey, this.todos);
+      this.router.navigate(['/list']);
       console.log(this.todos);
     } else {
       alert('не валидно')
